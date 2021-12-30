@@ -1,8 +1,13 @@
+from numpy import byte
 import streamlit as st
 import random
 from time import sleep
 import pandas as pd
-import numpy as np
+import hashlib
+import json
+import rsa
+
+publicKey, privateKey = rsa.newkeys(1024)
 
 
 def show_information():
@@ -11,22 +16,29 @@ def show_information():
         with st.spinner('Sending Information...!'):
             sleep(5)
         st.success('Information sent. Emergency services must be on their way.')
-        sleep(5)
+        sleep(2)
     else:
         st.warning("Couldn't connect to server.")
         with st.spinner('Initiating peer2peer mode.'):
-            sleep(2)
+            sleep(5)
         st.success(f"Connected to nearby node.")
         with st.spinner('Sending info..!'):
-            sleep(2)
+            sleep(5)
         st.success('Information sent. Emergency services must be on their way.')
-        df = pd.DataFrame([[
-            st.session_state.lat, st.session_state.lon
-        ]],
-        columns=['Latitude', 'Longitude']
-        )
-        st.table(df)
-        sleep(5)
+    data = {
+        'location':{
+            'latitude':st.session_state.lat,
+            'longitude':st.session_state.lon,
+        }
+    }
+    st.json(data)
+    encrypted = rsa.encrypt(json.dumps(data).encode(), publicKey)
+    st.subheader("Encrypted")
+    st.text(encrypted)
+    st.subheader("decrypted")
+    decrypted = rsa.decrypt(encrypted, privateKey).decode()
+    st.text(decrypted)
+    sleep(10)
 
 
 def panic_triggered():
@@ -36,13 +48,15 @@ def panic_triggered():
 
 
 def alcohol_detected():
-    container = status_container.container()
-    st.error('Alcohol button clicked')
+    with status_container.container():
+        st.error('Alcohol button clicked')
+        show_information()
 
 
 def accident_occured():
-    container = status_container.container()
-    st.error('Accident button clicked')
+    with status_container.container():
+        st.error('Accident button clicked')
+        show_information()
 
 
 st.title("Smart Car with Enhanced Safety System", anchor='title')
