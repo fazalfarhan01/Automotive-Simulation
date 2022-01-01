@@ -3,14 +3,27 @@ import streamlit as st
 import random
 from time import sleep
 import pandas as pd
-import hashlib
 import json
 import rsa
+import requests
+import base64
+import uuid
+
+from port_scanner import get_near_by_nodes
+
 
 publicKey, privateKey = rsa.newkeys(1024)
 
 
 def show_information():
+    data = {
+        'device_id': 'id_001',
+        'location': {
+            'latitude': st.session_state.lat,
+            'longitude': st.session_state.lon,
+        }
+    }
+
     st.info("Sending information to emergency services.")
     if st.session_state.connectivity:
         with st.spinner('Sending Information...!'):
@@ -20,24 +33,30 @@ def show_information():
     else:
         st.warning("Couldn't connect to server.")
         with st.spinner('Initiating peer2peer mode.'):
-            sleep(5)
-        st.success(f"Connected to nearby node.")
+            near_by_node = get_near_by_nodes()
+            sleep(2)
+        st.success(f"Connected to nearby node: {near_by_node}")
+        with st.spinner('Requesting server public key'):
+            serverPublicKey = requests.get(
+                url=f'http://{near_by_node}:8502/getKeys/').content.decode()
+        encrypted = rsa.encrypt(json.dumps(data).encode(
+        ), rsa.PublicKey(int(serverPublicKey), 65537))
+
+        b64_encStr = base64.b64encode(encrypted)
+        to_send = b64_encStr.decode("utf-8")
+
         with st.spinner('Sending info..!'):
-            sleep(5)
-        st.success('Information sent. Emergency services must be on their way.')
-    data = {
-        'location':{
-            'latitude':st.session_state.lat,
-            'longitude':st.session_state.lon,
-        }
-    }
+            response = requests.post(
+                url=f'http://{near_by_node}:8502/forward/',
+                json={'encrypted': to_send}
+            )
+            status = json.loads(response.content)['status']
+        if status:
+            st.success(
+                'Information sent. Emergency services must be on their way.')
+        else:
+            st.error('Failed to send information. Node has discarded your.')
     st.json(data)
-    encrypted = rsa.encrypt(json.dumps(data).encode(), publicKey)
-    st.subheader("Encrypted")
-    st.text(encrypted)
-    st.subheader("decrypted")
-    decrypted = rsa.decrypt(encrypted, privateKey).decode()
-    st.text(decrypted)
     sleep(10)
 
 
