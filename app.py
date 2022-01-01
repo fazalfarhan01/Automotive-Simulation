@@ -7,7 +7,7 @@ import json
 import rsa
 import requests
 import base64
-import uuid
+import requests
 
 from port_scanner import get_near_by_nodes
 
@@ -25,11 +25,30 @@ def show_information():
     }
 
     st.info("Sending information to emergency services.")
+
+    # id direct connection is available
     if st.session_state.connectivity:
+        with st.spinner('Requesting server public key'):
+            serverPublicKey = response = requests.get(
+                "http://localhost:8500/keys").content.decode()
+
+        encrypted = rsa.encrypt(json.dumps(data).encode(
+        ), rsa.PublicKey(int(serverPublicKey), 65537))
+
+        b64_encStr = base64.b64encode(encrypted)
+        to_send = b64_encStr.decode("utf-8")
         with st.spinner('Sending Information...!'):
-            sleep(5)
-        st.success('Information sent. Emergency services must be on their way.')
-        sleep(2)
+            response = requests.post(
+                url=f'http://localhost:8500/receive/',
+                json={'encrypted': to_send}
+            )
+            status = json.loads(response.content)['status']
+        if status:
+            st.success(
+                'Information sent. Emergency services must be on their way.')
+        else:
+            st.error('Server failed to decrypt info.')
+    # if direct connection is not available
     else:
         st.warning("Couldn't connect to server.")
         with st.spinner('Initiating peer2peer mode.'):

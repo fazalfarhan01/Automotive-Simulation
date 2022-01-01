@@ -5,7 +5,6 @@ import requests
 app = Flask(__name__)
 
 
-
 @app.route('/')
 def index():
     return "<h1>Smart Car with Enhanced Safety System : Node<h1>"
@@ -16,13 +15,13 @@ def forward():
     print('Received the following information')
     print(request.json.get('encrypted'))
     try:
-        requests.post(
+        response = requests.post(
             url=f'http://localhost:8500/receive/',
             json=request.json
         )
-        return {'status':True}
+        return json.loads(response.content)
     except requests.exceptions.ConnectionError:
-        return {'status':False}
+        return {'status': False}
 
 
 @app.route('/getKeys/')
