@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "./start.ps1",
+            "name": "Run Streamlit",
+            "request": "launch",
+            "type": "node-terminal",
+            "console": "integratedTerminal",
+        }
+    ]
+}
