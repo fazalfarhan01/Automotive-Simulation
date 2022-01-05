@@ -1,4 +1,3 @@
-from numpy import byte
 import streamlit as st
 import random
 from time import sleep
